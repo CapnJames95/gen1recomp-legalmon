@@ -1,0 +1,15 @@
+return {
+  summary = "Generate all 386 Gen III species with acquisition-specific proofs in native FRLG menus.",
+  author = "LegalMon contributors",
+  tags = { "tool", "gen3", "legality" },
+  differences = {
+    changed = {},
+    added = { "LEGALMON start-menu screen", "PID/IV solver and party/PC delivery" },
+    known = { "All 386 species; not every origin, form or exact build", "Hypothetical breeding parents; restricted events retain fixed OT and shiny locks", "48 Colosseum and 83 XD Shadows; Poke Spots, starters, trades and e-reader", "Bounded searches; selected rematch configurations; e-reader uses Japanese language and nickname MON" },
+  },
+  credits = {
+    { who = "BOIS CLUB GAMES, LLC", for_ = "Based on the Pokemon Gen 1 Recompilation Project by BOIS CLUB GAMES, LLC" },
+    { who = "PKHeX contributors", for_ = "Gen III legality behavior reference; no source code copied" },
+  },
+  compat = { engine = ">=0.0.0-0 <2.0.0", modApi = 2 },
+}

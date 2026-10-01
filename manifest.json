@@ -1,0 +1,18 @@
+{
+  "id": "legalmon",
+  "name": "LegalMon",
+  "version": "0.18.2",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "overhaul",
+  "category": "TOOL",
+  "games": [
+    "gen3"
+  ],
+  "game_version": ">=0.3.39 <0.4.0",
+  "permissions": [
+    "engine_internals"
+  ],
+  "description": "All 386 Gen III species in a native FRLG menu: acquisition-specific RNG proofs, eggs, restricted events, ROM sprites and guarded delivery.",
+  "github": "CapnJames95/gen1recomp-legalmon"
+}
