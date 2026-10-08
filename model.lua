@@ -85,7 +85,7 @@ return function(Solver)
       local selected = page.rows and page.rows[page.cursor]
       return selected and selected.national and string.format("#%03d", selected.national) or ""
     end
-    return page.rows and #page.rows > 6 and (page.cursor .. "/" .. #page.rows) or version == "emerald" and "EM" or version == "leafgreen" and "LG" or "FR"
+    return page.rows and #page.rows > 6 and (page.cursor .. "/" .. #page.rows) or version == "ruby" and "RU" or version == "sapphire" and "SA" or version == "emerald" and "EM" or version == "leafgreen" and "LG" or "FR"
   end
 
   function Model.ivs(request, mode)

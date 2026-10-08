@@ -1,0 +1,17 @@
+tests/fixtures.lua
+tests/legalmon_test.lua
+tests/screen_test.lua
+tests/rom_test.lua
+tests/qol_test.lua
+tests/origins_test.lua
+tests/expanded_test.lua
+tests/gamecube_test.lua
+tests/profiles_test.lua
+tests/wildvariants_test.lua
+tests/unown_test.lua
+tests/trades_test.lua
+tests/movehistory_test.lua
+tests/eggmoves_test.lua
+tests/breedingchains_test.lua
+tests/pkhex/Check.csproj
+tests/pkhex/Program.cs

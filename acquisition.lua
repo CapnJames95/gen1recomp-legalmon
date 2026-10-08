@@ -1,10 +1,15 @@
 return function(version, national)
   local rows = {}
+  -- Verified FireRed Pokemon Mansion land slot. A small transfer fallback keeps
+  -- Ditto available even when no other game's ROM has been imported.
+  rows[#rows+1]={species=132,level=30,minimum=30,maxLevel=30,location=135,
+    version='firered',kind='wild land (transfer)',method='Method H1',ball=4,
+    slotLow=50,slotHigh=60,slot=4,map='1:62'}
   local function add(species, level, location, kind)
     rows[#rows + 1] = { species = species, level = level, minimum = level,
       location = location, kind = kind, version = version, method = "Method 1", ball = 4 }
   end
-  if version ~= "emerald" then
+  if version == "firered" or version == "leafgreen" then
   for _, species in ipairs({ 1, 4, 7 }) do add(species, 5, 88, "starter") end
   for _, species in ipairs({ 138, 140, 142 }) do add(species, 5, 96, "fossil") end
   add(106, 25, 98, "gift")
@@ -36,7 +41,7 @@ return function(version, national)
     return {}
   end
   end
-  if version == "emerald" then
+  if version == "emerald" or version == "ruby" or version == "sapphire" then
     -- Tanoby Chambers transfer origins verified against the native FRLG import.
     -- Emerald has no native Unown encounter; preserve FireRed provenance.
     for _,u in ipairs({
@@ -91,6 +96,12 @@ return function(version, national)
     foreign(379, 40, 83, origin)
     foreign(384, 70, 85, origin)
   end
+  for _, origin in ipairs({'ruby','sapphire'}) do
+    foreign(origin=='ruby' and 381 or 380,40,16,origin,'roamer')
+    rows[#rows].method='RS roamer'
+    foreign(origin=='ruby' and 380 or 381,50,73,origin,'event-ticket stationary')
+    rows[#rows].event=true
+  end
   foreign(383, 45, 72, "ruby")
   foreign(382, 45, 72, "sapphire")
   foreign(101, 30, 66, "ruby")
@@ -101,7 +112,7 @@ return function(version, national)
   for _, species in ipairs({ 152, 155, 158 }) do foreign(species, 5, 0, "emerald", "starter") end
   foreign(185, 40, 58, "emerald")
   for _, species in ipairs({ 380, 381 }) do foreign(species, 40, 16, "emerald", "roamer") end
-  if version ~= "emerald" then
+  if version == "firered" or version == "leafgreen" then
   for _, species in ipairs({ 243, 244, 245 }) do
     add(species, 50, 101, "roamer")
     rows[#rows].method = "FRLG roamer"

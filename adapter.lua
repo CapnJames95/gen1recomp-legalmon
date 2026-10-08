@@ -18,6 +18,8 @@ return function(Solver, encounters)
 
   function Adapter.catalog(pack, version)
     local catalog = {}
+    local hoenn=version=="emerald" or version=="ruby" or version=="sapphire"
+    local rs=version=="ruby" or version=="sapphire"
     local capeBrink = require("src.core.game3.move_learn").CAPE_BRINK
     local function add(encounter, species, minimum, visited)
       if visited[species] or species > 411 or minimum > 100 then return end
@@ -51,7 +53,7 @@ return function(Solver, encounters)
             end
           end
         end
-        for _, tutor in pairs(version ~= "emerald" and capeBrink or {}) do
+        for _, tutor in pairs(not hoenn and capeBrink or {}) do
           if tutor.species == species and pack.move_names[tutor.move] and pack.battle_moves.moves[tutor.move] then
             row.tutors[tutor.move] = "FRLG Cape Brink tutor"
           end
@@ -81,7 +83,7 @@ return function(Solver, encounters)
       end
     end
     local seen, gamecube = {}, {}
-    for _, source in ipairs((version == "emerald" and {"emerald","firered","leafgreen"} or {version,version == "firered" and "leafgreen" or "firered"})) do
+    for _, source in ipairs((hoenn and {version,"firered","leafgreen"} or {version,version == "firered" and "leafgreen" or "firered"})) do
       for _, encounter in ipairs(encounters(source, pack.national)) do
         local key = table.concat({ encounter.version, encounter.species, encounter.level, encounter.location, encounter.method, encounter.form or "", encounter.slotLow or "" }, ":")
         if not seen[key] then
@@ -111,8 +113,8 @@ return function(Solver, encounters)
       if species and (not previous[species] or national == 183 or national == 202) then
         local parent = parentFor(species, {})
         if parent then
-          add({ species = species, level = 5, location = version == "emerald" and 0 or 88, version = version, kind = "bred and hatched",
-            method = version == "emerald" and "Emerald egg" or "FRLG egg", ball = 4, parentSpecies = parent,
+          add({ species = species, level = 5, location = hoenn and 0 or 88, version = version, kind = "bred and hatched",
+            method = version == "emerald" and "Emerald egg" or rs and "RS egg" or "FRLG egg", ball = 4, parentSpecies = parent,
             split = (national == 29 or national == 314) and "low" or (national == 32 or national == 313) and "high" or nil,
             incense = national == 298 and "Sea Incense" or national == 360 and "Lax Incense" or nil }, species, 5, {})
         end
@@ -143,7 +145,7 @@ return function(Solver, encounters)
         end
         if valid and (trade.abilityNum == 0 or trade.abilityNum == 1) and (trade.otGender == 0 or trade.otGender == 1) then
           add({ species = trade.species, level = minimum, location = 254, version = version, kind = "fixed NPC trade",
-            method = version == "emerald" and "Emerald trade" or "FRLG trade", ball = 4, nickname = trade.nickname, tradeIndex = index, requestedSpecies = trade.requestedSpecies,
+            method = hoenn and "Emerald trade" or "FRLG trade", ball = 4, nickname = trade.nickname, tradeIndex = index, requestedSpecies = trade.requestedSpecies,
             fixedPID = trade.personality, fixedIVs = ivs, fixedAbility = trade.abilityNum,
             ot = { name = trade.otName, tid = trade.otId % 65536, sid = math.floor(trade.otId / 65536), gender = trade.otGender },
             contest = { cool = trade.conditions[1], beauty = trade.conditions[2], cute = trade.conditions[3],
@@ -175,7 +177,7 @@ return function(Solver, encounters)
     end
     for _, row in pairs(catalog) do
       for _, encounter in ipairs(row.encounters) do
-        if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg") then
+        if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg" or encounter.method == "RS egg") then
           local child = encounter.species
           if not breeding[child] then
             local allowed, fathers, shared, parents = {}, {}, {}, {}
@@ -239,6 +241,32 @@ return function(Solver, encounters)
           for move, source in pairs(witness.parentMoves) do
             if not excluded[move] and not smeargle.sketchMoves[move] then
               smeargle.sketchMoves[move] = "Gen 3 Sketch from species " .. species .. " (" .. source .. ")"
+            end
+          end
+        end
+      end
+    end
+    -- A source catalogue is built using that edition's own imported data.
+    -- Keep its encounter/egg/trade proof rather than relabelling host encounters.
+    for _, origin in ipairs({'firered','leafgreen','emerald','ruby','sapphire'}) do
+      local foreign = pack.foreignPacks and pack.foreignPacks[origin]
+      if foreign then
+        local source = Adapter.catalog(foreign, origin)
+        for species, sourceRow in pairs(source) do
+          local target = catalog[species]
+          if not target then
+            target=copy(sourceRow);target.hostVersion=version;target.encounters={}
+            target.name=pack.names[species];target.learnset=pack.learnsets[species]
+            catalog[species]=target
+          end
+          local function signature(e)
+            return table.concat({e.version,e.species,e.minimum,e.level,e.location,e.method,
+              e.form or '',e.slotLow or '',e.slotHigh or '',e.tradeIndex or ''},':')
+          end
+          local seen={};for _,e in ipairs(target.encounters) do seen[signature(e)]=true end
+          for _,e in ipairs(sourceRow.encounters) do
+            if e.version==origin and not seen[signature(e)] then
+              target.encounters[#target.encounters+1]=copy(e);seen[signature(e)]=true
             end
           end
         end
@@ -317,18 +345,20 @@ return function(Solver, encounters)
     return { id = id, regionMapSectionId = section }
   end
 
-  function Adapter.load(session)
-    if not session or (session.version ~= "firered" and session.version ~= "leafgreen" and session.version ~= "emerald") then
-      return nil, "LegalMon requires a FireRed, LeafGreen or Emerald session."
+  function Adapter.load(session, sourceCache)
+    if not session or (session.version ~= "firered" and session.version ~= "leafgreen" and session.version ~= "emerald" and session.version ~= "ruby" and session.version ~= "sapphire") then
+      return nil, "LegalMon requires a supported Gen 3 session."
     end
-    local cache = require("src.core.game3.dataset").cache()
+    local cache = sourceCache or require("src.core.game3.dataset").cache()
     local root = require("src.core.game3.cache_paths").CACHE_ROOT
     local source = cache:read(root .. "/meta.json")
     local Versions = require("src.import.gba.versions").forGame(session.version)
     local hash = (source or ""):match('"md5"%s*:%s*"([a-f0-9]+)"')
-    local identity = hash and Versions.BY_SHA1[hash]
+    -- RS revision facades expose only the selected revision in BY_SHA1.
+    -- Resolve a foreign cache without switching the active game's tables.
+    local identity = hash and (Versions.lookupSha1 and Versions.lookupSha1(hash) or Versions.BY_SHA1[hash])
     if not identity then
-      return nil, "Import a supported clean US FireRed, LeafGreen or Emerald ROM with this engine version first."
+      return nil, "Import a supported clean US Gen 3 ROM with this engine version first."
     end
     if identity.game ~= session.version then
       return nil, "Imported ROM edition does not match this session."
@@ -378,6 +408,18 @@ return function(Solver, encounters)
         end
       end
       pack.wild = Adapter.wildCatalog(tables, headers, session.version)
+    end
+    if not sourceCache then
+      pack.foreignPacks, pack.unavailableOrigins = {}, {}
+      local CacheFs = require('src.import.CacheFs')
+      for _, other in ipairs({'firered','leafgreen','emerald','ruby','sapphire'}) do
+        if other ~= session.version then
+          local foreignCache = {read=function(_,path) return CacheFs.readAt(other..'/'..path) end}
+          local foreign, why = Adapter.load({version=other}, foreignCache)
+          if foreign then pack.foreignPacks[other]=foreign
+          else pack.unavailableOrigins[other]=why end
+        end
+      end
     end
     return pack
   end
@@ -455,12 +497,29 @@ return function(Solver, encounters)
       end
       mon.pp[index], mon.maxPp[index] = data.pp, data.pp
     end
+    if prepared.trade or encounter.ereader then
+      local Codec=require('src.save_convert.Gen3Save')
+      local function bytes(text,length,pad)
+        local raw=Codec.encodeString(text,length,pad,mon.language)
+        return {raw:byte(1,-1)}
+      end
+      if encounter.ereader then
+        -- Japanese trainer buffers contain six FF-filled bytes followed by zero.
+        mon.cartExtra.nicknameRaw=bytes(mon.nickname,10,255)
+        mon.cartExtra.otNameRaw=bytes(mon.otName,6,255)
+        mon.cartExtra.otNameRaw[7]=0
+      else
+        mon.cartExtra.nicknameRaw=bytes(mon.nickname~='' and mon.nickname or mon.name,10,0)
+        mon.cartExtra.otNameRaw=bytes(mon.otName,7,0)
+      end
+    end
     Pokemon.applyStats(mon)
     mon.hp = mon.maxHp
     return mon
   end
 
   function Adapter.deliver(job, request, session, pack, destination, targetBox)
+  if session and (session.version=='ruby' or session.version=='sapphire') and tostring(require('src.core.game3.map').current or session.map):find('BATTLE_TOWER',1,true) then return false,'Leave the Battle Tower before receiving Pokemon.' end
   if session and session.version=="emerald" and session.frontier and (session.frontier.challengeStatus or 0)~=0 then return false,"Finish the Battle Frontier challenge before receiving Pokemon." end
     if job.consumed then return false, "Already delivered. Validate again for another Pokemon." end
     if destination ~= "party" and destination ~= "pc" then return false, "Choose party or PC." end

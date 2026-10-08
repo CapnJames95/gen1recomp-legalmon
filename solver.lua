@@ -155,7 +155,13 @@ function Solver.eggFrame(seed, prepared)
   local available, selected, parents = { "hp", "atk", "def", "spe", "spa", "spd" }, {}, {}
   for index = 1, 3 do
     state = Solver.next(state)
-    selected[index] = table.remove(available, math.floor(state / 65536) % #available + 1)
+    if prepared.encounter.method=='RS egg' then
+      selected[index]=available[math.floor(state/65536)%(7-index)+1]
+      local position;for i,key in ipairs(Solver.stats)do if key==selected[index] then position=i end end
+      available[position]=false
+      local temp={};for i=1,6 do temp[i]=available[i] end
+      local at=1;for i=1,6 do if temp[i] then available[at]=temp[i];at=at+1 end end
+    else selected[index] = table.remove(available, math.floor(state / 65536) % #available + 1) end
   end
   for index = 1, 3 do
     state = Solver.next(state)
@@ -367,7 +373,7 @@ end
 
 function Solver.acquisition(encounter)
   if (encounter.method == "FRLG trade" or encounter.method == "Emerald trade") then return "trade" end
-  if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg") then return "egg" end
+  if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg" or encounter.method == "RS egg") then return "egg" end
   if encounter.method ~= "GameCube" then return "cartridge" end
   if encounter.ereader then return "ereader" end
   if encounter.pokespot ~= nil then return "pokespot" end
@@ -468,7 +474,7 @@ function Solver.breedingProof(encounter, moves, catalog, limits)
             usesHistory = true
           else needed[#needed + 1] = move end
         end
-        local parents = #needed > 0 and (profile.method == "FRLG egg" or profile.method == "Emerald egg") and pairProof(profile, needed, depth)
+        local parents = #needed > 0 and (profile.method == "FRLG egg" or profile.method == "Emerald egg" or profile.method == "RS egg") and pairProof(profile, needed, depth)
         if #needed == 0 or parents then
           for _, move in ipairs(needed) do sources[move] = "Gen 3 chained inheritance from species " .. parents.species end
           return finish({ species = species, moves = sources, profileIndex = profileIndex,
@@ -602,11 +608,11 @@ function Solver.prepare(request, catalog, trainer, profileIndex)
     return nil, failure("impossible", "IV bounds conflict with the requested total or perfect-IV count.")
   end
   if encounter.antishiny and request.shiny then return nil, failure("impossible", "This implemented event distribution is shiny-locked; the original trainer cannot be changed.") end
-  if encounter.method == "FRLG roamer" then
+  if (encounter.method == "FRLG roamer" or encounter.method == "RS roamer") then
     for _, stat in ipairs({ "def", "spe", "spa", "spd" }) do
-      if constraints[stat].min > 0 then return nil, failure("impossible", "FRLG roaming IV bug requires Defense, Speed and both Special IVs to be zero.") end
+      if constraints[stat].min > 0 then return nil, failure("impossible", "Ruby/Sapphire/FRLG roaming IV bug requires Defense, Speed and both Special IVs to be zero.") end
     end
-    if constraints.atk.min > 7 then return nil, failure("impossible", "FRLG roaming IV bug limits Attack IV to 0-7.") end
+    if constraints.atk.min > 7 then return nil, failure("impossible", "Ruby/Sapphire/FRLG roaming IV bug limits Attack IV to 0-7.") end
   end
   local available, defaults = {}, {}
   for _, move in ipairs(row.learnset) do
@@ -637,7 +643,7 @@ function Solver.prepare(request, catalog, trainer, profileIndex)
   end
   if encounter.method=='Emerald egg' and encounter.species==172 then available[344]='Emerald breeding with a Light Ball parent' end
   local eggRequired, eggInheritedMoves, eggMoveFather = {}, {}, nil
-  if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg") then
+  if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg" or encounter.method == "RS egg") then
     for move in pairs(encounter.eggMoves or {}) do
       if not available[move] then available[move], eggRequired[move] = "Gen 3 egg move; compatible father required", true end
     end
@@ -683,10 +689,10 @@ function Solver.prepare(request, catalog, trainer, profileIndex)
     moves = copied, sources = sources, moveHistory = moveHistory, eggMoveFather = eggMoveFather, eggInheritedMoves = eggInheritedMoves,
     encounter = encounter, encounters = eligible, row = row,
     minTotal = request.minTotal, minPerfect = request.minPerfect, hiddenType = request.hiddenType, hiddenPower = request.hiddenPower,
-    egg = (encounter.method == "FRLG egg" or encounter.method == "Emerald egg"), gamecube = encounter.method == "GameCube", trade = (encounter.method == "FRLG trade" or encounter.method == "Emerald trade"), customOT = customOT, otSeed = otSeed,
+    egg = (encounter.method == "FRLG egg" or encounter.method == "Emerald egg" or encounter.method == "RS egg"), gamecube = encounter.method == "GameCube", trade = (encounter.method == "FRLG trade" or encounter.method == "Emerald trade"), customOT = customOT, otSeed = otSeed,
     fixedOT = encounter.playerSID and { name = encounter.ot.name, tid = encounter.ot.tid, sid = trainer.sid, gender = encounter.ot.gender } or nil,
     seedChoices = encounter.starter and Solver.starterSeeds(customOT or trainer, encounter.starter) or nil,
-    event = encounter.method == "Restricted event", roamer = encounter.method == "FRLG roamer", unown = encounter.method == "Unown H1",
+    event = encounter.method == "Restricted event", roamer = (encounter.method == "FRLG roamer" or encounter.method == "RS roamer"), unown = encounter.method == "Unown H1",
     trainer = { tid = trainer.tid, sid = trainer.sid, name = trainer.name, gender = trainer.gender } }
 end
 
@@ -889,7 +895,7 @@ local function attachProof(frame, prepared)
     return false, "incomplete"
   end
   for index, encounter in ipairs(encounters) do
-    if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg") and prepared.egg and Solver.evolutionMatches(frame, encounter, prepared) then
+    if (encounter.method == "FRLG egg" or encounter.method == "Emerald egg" or encounter.method == "RS egg") and prepared.egg and Solver.evolutionMatches(frame, encounter, prepared) then
       local low = frame.pid % 65536
       if not encounter.split or encounter.split == "low" and low < 32768 or encounter.split == "high" and low >= 32768 then
         frame.encounterIndex, frame.metLevel = index, 0

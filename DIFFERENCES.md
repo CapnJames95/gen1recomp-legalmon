@@ -2,14 +2,8 @@
 
 Build Pokemon with acquisition-specific legality checks.
 
-# LegalMon
+Supports Ruby, Sapphire, Emerald, FireRed and LeafGreen.
 
-Build Pokemon with acquisition-specific legality checks.
+All 386 species have supported acquisition routes across the five games, including transferred Ditto in Ruby/Sapphire. Expands imported source-game profiles and fixes roaming, NPC-trade and e-Reader export details.
 
-For **Emerald, FireRed and LeafGreen**. Recommend **gen1recomp 0.3.42+**, especially for Sweet Scent.
-
-- Configure species, moves, IVs and supported acquisition details.
-- Validate supported generation constraints before party or PC delivery.
-- Supports Emerald, FireRed and LeafGreen. Legality checks are bounded, not a universal guarantee.
-
-The repository migration changes only package metadata and documentation; runtime Lua matches collection v1.3.
+See [README](README.md) for features, controls and limitations.

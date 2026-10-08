@@ -41,7 +41,7 @@ return function(mod)
     if type(result) ~= "table" then return result end
     local Runtime = require("src.core.game3.runtime")
     local session = Runtime.getSession()
-    if not session or (session.version ~= "firered" and session.version ~= "leafgreen" and session.version ~= "emerald") then return result end
+    if not session or (session.version ~= "firered" and session.version ~= "leafgreen" and session.version ~= "emerald" and session.version ~= "ruby" and session.version ~= "sapphire") then return result end
     for _, row in ipairs(result) do if row.id == "legalmon" then return result end end
     for index, row in ipairs(result) do
       if row.id == "save" then

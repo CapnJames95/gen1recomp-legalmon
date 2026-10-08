@@ -110,6 +110,7 @@ return function(Solver, Adapter, Model, makeView, services)
         local matches = Model.filter(choices, query)
         for _, option in ipairs(matches) do
           entry.rows[#entry.rows + 1] = { label = option.label, help = option.help, species = option.species, national = option.national, shiny = option.shiny, level = option.level, form = option.form, action = function()
+            if option.unavailable then info("ORIGIN UNAVAILABLE", {option.help}); return end
             rememberPlace(); table.remove(screen.pages); if option.species then cry(option.species) end; setter(option.value)
           end }
         end
@@ -483,7 +484,13 @@ return function(Solver, Adapter, Model, makeView, services)
           { label = function() return "Origin: " .. (request().origin or "Any supported") end, help = "Source game survives transfer into the active game. Exact origin is never relaxed.", action = function()
             local choices = { { label = "Any supported" } }
             for _, origin in ipairs({ "firered", "leafgreen", "ruby", "sapphire", "emerald", "colosseum", "xd" }) do
-              choices[#choices + 1] = { label = origin, value = origin }
+              local available=false
+              for _, e in ipairs(speciesRow().encounters or {}) do if e.version==origin then available=true;break end end
+              local missing=pack.unavailableOrigins and pack.unavailableOrigins[origin]
+              choices[#choices + 1] = { label = origin .. (available and "" or " [unavailable]"), value = origin,
+                unavailable=not available, help=available and Model.originHint(speciesRow(),origin)
+                  or (missing and "Import this source game's supported ROM to load its native routes. Existing verified transfer profiles remain available."
+                    or "No supported acquisition for this species in this origin. Another origin may be available.") }
             end
             choose("ORIGIN GAME", choices, function(value) change("origin", value) end)
           end },
